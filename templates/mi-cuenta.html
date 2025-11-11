@@ -79,8 +79,8 @@
                 </div>
 
 
-                <!-- Formulario de INICIO DE SESIÓN -->
-                <form id="login-form" class="space-y-6">
+                <!-- ✅ Formulario de INICIO DE SESIÓN -->
+                <form id="login-form" class="space-y-6" method="POST" action="/login">
                     <div>
                         <label for="login-email" class="block text-sm font-medium text-palees-text-dark mb-1">Correo
                             Electrónico</label>
@@ -114,8 +114,8 @@
                     </button>
                 </form>
 
-                <!-- Formulario de REGISTRO (Inicialmente oculto) -->
-                <form id="register-form" class="space-y-6 hidden">
+                <!-- ✅ Formulario de REGISTRO (Inicialmente oculto) -->
+                <form id="register-form" class="space-y-6 hidden" method="POST" action="/register">
                     <div>
                         <label for="register-name" class="block text-sm font-medium text-palees-text-dark mb-1">Nombre
                             Completo</label>
@@ -159,12 +159,30 @@
                         Crear Cuenta Palees
                     </button>
                 </form>
-                <!-- Área de Mensajes (Opcional: para mostrar errores/éxito) -->
+
+                <!-- ✅ MENSAJES FLASH (ubicación 3: debajo del formulario) -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="mt-4">
+                            {% for category, message in messages %}
+                                <div class="p-3 rounded-lg mb-2 text-sm
+                                    {% if category == 'success' %} bg-green-100 text-green-800
+                                    {% elif category == 'error' %} bg-red-100 text-red-800
+                                    {% else %} bg-blue-100 text-blue-800 {% endif %}">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Área de Mensajes -->
                 <div id="message-area" class="mt-4 p-3 rounded-lg text-sm hidden"></div>
 
             </div>
         </div>
     </main>
+
     <!-- OVERLAY DEL CARRITO -->
     <div id="cart-modal-overlay" class="fixed inset-0 bg-black opacity-0 hidden transition-opacity duration-300 z-40"
         onclick="toggleCartModal()"></div>
@@ -196,8 +214,8 @@
                     Finalizar Compra
                 </button>
             </div>
-        </div>
     </div>
+
     <!-- BOTÓN DE MODO OSCURO -->
     <div style="position: fixed; bottom: 20px; right: 20px; z-index: 100;">
         <button id="modoBtn"
@@ -206,13 +224,15 @@
         </button>
     </div>
 
-
-    <!-- FOOTER - Mantenemos el mismo de la página de inicio -->
+    <!-- FOOTER -->
     {% include 'footer.html' %}
+
+    <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/loginregistro.js') }}"></script>
     <script src="{{ url_for('static', filename='js/cart.js') }}"></script>
     <script src="{{ url_for('static', filename='js/checkout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ModoOscuro.js') }}"></script>
+
 </body>
 
 </html>

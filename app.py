@@ -1,10 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
-import pymysql
 from werkzeug.security import generate_password_hash, check_password_hash
+from database import get_conn
+from dotenv import load_dotenv
+import os
+
+# Cargar variables del .env
+load_dotenv()
 
 # Inicializar Flask
 app = Flask(__name__)
-app.secret_key = "clave_secreta"
+app.secret_key = os.getenv("SECRET_KEY", "clave_secreta")
 
 # ================================
 # 🌐 RUTAS PRINCIPALES
@@ -16,8 +21,8 @@ def index():
 
 @app.route('/coleccion')
 def coleccion():
-    selected_category = request.args.get('category', default=None)
-    return render_template('categories.html', selected_category=selected_category)
+    category = request.args.get('category')
+    return render_template('categories.html', selected_category=category)
 
 @app.route('/ofertas')
 def ofertas():
@@ -55,6 +60,7 @@ def gracias():
 # ================================
 # 💬 FORMULARIO DE CONTACTO
 # ================================
+
 @app.route('/contacto', methods=['GET', 'POST'])
 def contacto():
     if request.method == 'POST':
@@ -63,20 +69,22 @@ def contacto():
         message = request.form['message']
 
         try:
-            connection = get_db_connection()
-            cursor = connection.cursor()
-            cursor.execute(
-                "INSERT INTO contact_messages (name, email, message) VALUES (%s, %s, %s)",
-                (name, email, message)
-            )
-            connection.commit()
-            cursor.close()
-            connection.close()
-
+            con = get_conn()
+            cur = con.cursor()
+            cur.execute("""
+                INSERT INTO contact_messages (name, email, message)
+                VALUES (%s, %s, %s)
+            """, (name, email, message))
+            con.commit()
             flash("✅ Tu mensaje ha sido enviado correctamente.", "success")
-            return redirect(url_for('contacto'))
         except Exception as e:
+            print("ERROR CONTACTO:", e)
             flash("❌ Hubo un problema al enviar el mensaje.", "error")
+        finally:
+            cur.close()
+            con.close()
+
+        return redirect(url_for('contacto'))
 
     return render_template('contacto.html')
 
@@ -94,20 +102,25 @@ def register():
     password_hash = generate_password_hash(password)
 
     try:
-        con = get_db_connection()
+        con = get_conn()
         cur = con.cursor()
-        cur.execute("INSERT INTO usuarios (nombre, email, password) VALUES (%s, %s, %s)",
-                    (nombre, email, password_hash))
+
+        cur.execute("""
+            INSERT INTO usuarios (nombre, email, password)
+            VALUES (%s, %s, %s)
+        """, (nombre, email, password_hash))
+
         con.commit()
+        flash("✅ Cuenta creada con éxito. Ahora inicia sesión.", "success")
+
+    except Exception as e:
+        print("ERROR REGISTRO:", e)
+        flash("❌ Este correo ya está registrado o ocurrió un error.", "error")
+    finally:
         cur.close()
         con.close()
 
-        flash("✅ Cuenta creada con éxito. Ahora inicia sesión.", "success")
-        return redirect(url_for('cuenta'))
-
-    except:
-        flash("❌ Este correo ya está registrado o ocurrió un error.", "error")
-        return redirect(url_for('cuenta'))
+    return redirect(url_for('cuenta'))
 
 # ✅ Iniciar sesión
 @app.route('/login', methods=['POST'])
@@ -115,12 +128,18 @@ def login():
     email = request.form['email']
     password = request.form['password']
 
-    con = get_db_connection()
-    cur = con.cursor()
-    cur.execute("SELECT id, password FROM usuarios WHERE email = %s", (email,))
-    usuario = cur.fetchone()
-    cur.close()
-    con.close()
+    try:
+        con = get_conn()
+        cur = con.cursor()
+        cur.execute("SELECT id, password FROM usuarios WHERE email = %s", (email,))
+        usuario = cur.fetchone()
+    except Exception as e:
+        print("ERROR LOGIN:", e)
+        flash("❌ Error interno al iniciar sesión.", "error")
+        return redirect(url_for('cuenta'))
+    finally:
+        cur.close()
+        con.close()
 
     if usuario and check_password_hash(usuario[1], password):
         session['usuario_id'] = usuario[0]
